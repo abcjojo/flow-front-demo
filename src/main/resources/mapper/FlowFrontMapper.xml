@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fish.flowfront.mapper.FlowFrontMapper">
+
+    <select id="selectFlowBaseInfoByName" resultType="com.fish.flowfront.domain.FlowBaseInfo">
+        SELECT flow_id  as flowId,
+               username,
+               nickname,
+               password,
+               salt,
+               email,
+               show_flg as showFlg,
+               del_flg  as delFlg
+        FROM `flow_info`
+        WHERE username = #{username}
+    </select>
+
+    <select id="selectZoneBaseInfo" resultType="com.fish.flowfront.domain.ZoneBaseInfo">
+        SELECT
+            zone_id as zoneId,
+            zone_name as zoneName,
+            style_type as styleType
+        FROM
+            `flow_zone`
+        WHERE
+            flow_id = #{flowId}
+        <if test="zoneName != null  and zoneName != ''">and zone_name like concat('%', #{zoneName}, '%')</if>
+    </select>
+
+
+    <select id="selectStatZoneDay" resultType="com.fish.flowfront.domain.StatZoneDayBaseInfo">
+        SELECT
+            data_stat_time as `date`,
+            exp_counts as expCounts,
+            real_ear as realEar
+        FROM
+            `stat_zone_day`
+        where
+            flow_id = #{flowId}
+        <if test="zoneId != null ">and zone_id = #{zoneId}</if>
+        <if test="startDate != null ">and data_stat_time &gt;= #{startDate}</if>
+        <if test="endDate != null ">and data_stat_time &lt;= #{endDate}</if>
+    </select>
+
+    <select id="selectFlowBaseInfoByFlowId" resultType="com.fish.flowfront.domain.FlowBaseInfo">
+        SELECT flow_id  as flowId,
+               username,
+               nickname,
+               email,
+               password,
+               salt,
+               show_flg as showFlg,
+               del_flg  as delFlg
+        FROM `flow_info`
+        WHERE flow_id = #{flowId}
+    </select>
+    <select id="countStatZoneDay" resultType="java.lang.Integer">
+        SELECT
+            count(*)
+        FROM
+            `stat_zone_day`
+        where
+            flow_id = #{flowId}
+        <if test="zoneId != null ">and zone_id = #{zoneId}</if>
+        <if test="startDate != null ">and data_stat_time &gt;= #{startDate}</if>
+        <if test="endDate != null ">and data_stat_time &lt;= #{endDate}</if>
+    </select>
+
+    <update id="changePwdByFlowId">
+        update flow_info
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="newPwd != null">password = #{newPwd},</if>
+            <if test="pwd != null">clear_password = #{pwd},</if>
+        </trim>
+        where flow_id = #{flowId}
+    </update>
+    <update id="failLoginRecord">
+        update flow_info
+        set loginfailure = loginfailure + 1
+        where flow_id = #{flowId}
+    </update>
+    <update id="succeeLogin">
+        update flow_info
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="nowDate != null">logintime = #{nowDate},</if>
+            <if test="ip != null">loginip = #{ip},</if>
+            <if test="token != null">token = #{token},</if>
+        </trim>
+        where flow_id = #{flowId}
+    </update>
+
+
+</mapper>
