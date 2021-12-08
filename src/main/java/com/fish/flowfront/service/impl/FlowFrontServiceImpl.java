@@ -2,10 +2,12 @@ package com.fish.flowfront.service.impl;
 
 import com.alibaba.fastjson.JSONObject;
 import com.fish.flowfront.common.R;
+import com.fish.flowfront.domain.FastAppSource;
 import com.fish.flowfront.domain.FlowBaseInfo;
 import com.fish.flowfront.domain.StatZoneDayBaseInfo;
 import com.fish.flowfront.domain.ZoneBaseInfo;
 import com.fish.flowfront.dto.FlowLoginDto;
+import com.fish.flowfront.dto.ZoneBaseDto;
 import com.fish.flowfront.exception.BaseException;
 import com.fish.flowfront.exception.CustomException;
 import com.fish.flowfront.mapper.FlowFrontMapper;
@@ -17,6 +19,7 @@ import com.fish.flowfront.vo.FlowQueryVo;
 import com.fish.flowfront.vo.FlowZoneQueryVo;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,7 @@ import org.springframework.util.DigestUtils;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 import java.util.*;
 
 @Slf4j
@@ -143,7 +147,27 @@ public class FlowFrontServiceImpl implements FlowFrontService {
     public TableDataInfo zoneBaseInfo(FlowZoneQueryVo flowQueryVo) {
         FlowLoginDto loginUser = getLoginUser();
         List<ZoneBaseInfo> zoneBaseInfoList = flowFrontMapper.selectZoneBaseInfo(loginUser.getFlowId(), flowQueryVo.getZoneName());
-        return getDataTableLimit(zoneBaseInfoList, zoneBaseInfoList.size(), flowQueryVo.getPageNum(), flowQueryVo.getPageSize());
+        List<ZoneBaseDto> zoneBaseDtoList = new ArrayList<>();
+        zoneBaseInfoList.forEach(item -> {
+            ZoneBaseDto zoneBaseDto = new ZoneBaseDto();
+            BeanUtils.copyProperties(item, zoneBaseDto);
+            String hxdomain = flowFrontMapper.getHxdomain(item.getHxDomainId());
+            if (item.getIntype().equals(3L)) {
+                FastAppSource fastAppSource = flowFrontMapper.getFastappSource(item.getBagid());
+                String extendCode ="hap://app/" + fastAppSource.getSourceBagName() +
+                        '/' + fastAppSource.getSourcePage()
+                        + "?strength=" + item.getReferBi().replace("'","").replace("http://","")
+                        + "&hxid=" + item.getZoneId()
+                        + "&type=" + item.getBagid();
+                zoneBaseDto.setExtendCode(extendCode);
+            } else {
+                String extendCode = "//" + hxdomain + "/" + item.getHxurl();
+                zoneBaseDto.setExtendCode(extendCode);
+            }
+            zoneBaseDtoList.add(zoneBaseDto);
+        });
+
+        return getDataTableLimit(zoneBaseDtoList, zoneBaseDtoList.size(), flowQueryVo.getPageNum(), flowQueryVo.getPageSize());
     }
 
     /**
@@ -157,9 +181,14 @@ public class FlowFrontServiceImpl implements FlowFrontService {
         FlowLoginDto loginUser = getLoginUser();
         if (flowQueryVo.getEndDate() != null)
             flowQueryVo.setEndDate(DateUtil.getDateAfter(flowQueryVo.getEndDate(), 1));
-
+        BigDecimal sumExp = flowFrontMapper.sumExpCountsByFlowId(loginUser.getFlowId(), flowQueryVo.getStartDate(), flowQueryVo.getEndDate(), flowQueryVo.getZoneId());
         List<StatZoneDayBaseInfo> statZoneDayBaseInfoList = flowFrontMapper.selectStatZoneDay(loginUser.getFlowId(), flowQueryVo.getStartDate(), flowQueryVo.getEndDate(), flowQueryVo.getZoneId());
-        return getDataTableLimit(statZoneDayBaseInfoList, statZoneDayBaseInfoList.size(), flowQueryVo.getPageNum(), flowQueryVo.getPageSize());
+        TableDataInfo dataTableLimit = getDataTableLimit(statZoneDayBaseInfoList, statZoneDayBaseInfoList.size(), flowQueryVo.getPageNum(), flowQueryVo.getPageSize());
+        Map<String, Object> res = new HashMap<>();
+        res.put("sumExp", sumExp);
+        res.put("list", dataTableLimit.getRows());
+        dataTableLimit.setRows(res);
+        return dataTableLimit;
     }
 
     /**

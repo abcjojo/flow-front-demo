@@ -19,29 +19,45 @@
 
     <select id="selectZoneBaseInfo" resultType="com.fish.flowfront.domain.ZoneBaseInfo">
         SELECT
-            zone_id as zoneId,
-            zone_name as zoneName,
-            style_type as styleType
+        zone_id as zoneId,
+        zone_name as zoneName,
+        style_type as styleType,
+        case style_type
+            when '2' then 'WAP'
+            when '3' then '中转页WAP'
+            when '4' then '落地页'
+            when '6' then 'APP唤醒后'
+            when '7' then 'HAP'
+            end as styleTypeText,
+        intype as intype,
+        hxurl as hxurl,
+        hx_domain_id as hxDomainId,
+        bagid,
+        _refer_bi as referBi
         FROM
-            `flow_zone`
+        `flow_zone`
         WHERE
-            flow_id = #{flowId}
+        flow_id = #{flowId}
+        AND `del_flg` = '0'
+        AND `show_flg` = '0'
         <if test="zoneName != null  and zoneName != ''">and zone_name like concat('%', #{zoneName}, '%')</if>
     </select>
 
 
     <select id="selectStatZoneDay" resultType="com.fish.flowfront.domain.StatZoneDayBaseInfo">
         SELECT
-            data_stat_time as `date`,
-            exp_counts as expCounts,
-            real_ear as realEar
+        data_stat_time as `date`,
+        sum(ex_ip_counts) as expCounts,
+        real_ear as realEar
         FROM
-            `stat_zone_day`
+        `stat_zone_day`
         where
-            flow_id = #{flowId}
+        flow_id = #{flowId}
         <if test="zoneId != null ">and zone_id = #{zoneId}</if>
         <if test="startDate != null ">and data_stat_time &gt;= #{startDate}</if>
         <if test="endDate != null ">and data_stat_time &lt;= #{endDate}</if>
+        group by data_stat_time
+        order by data_stat_time desc
     </select>
 
     <select id="selectFlowBaseInfoByFlowId" resultType="com.fish.flowfront.domain.FlowBaseInfo">
@@ -58,11 +74,33 @@
     </select>
     <select id="countStatZoneDay" resultType="java.lang.Integer">
         SELECT
-            count(*)
+        count(*)
         FROM
-            `stat_zone_day`
+        `stat_zone_day`
         where
-            flow_id = #{flowId}
+        flow_id = #{flowId}
+        <if test="zoneId != null ">and zone_id = #{zoneId}</if>
+        <if test="startDate != null ">and data_stat_time &gt;= #{startDate}</if>
+        <if test="endDate != null ">and data_stat_time &lt;= #{endDate}</if>
+    </select>
+
+    <select id="getHxdomain" resultType="java.lang.String">
+        SELECT `domain`
+        FROM `fastapp_domain`
+        WHERE `domain_id` = #{hxDomainId}
+    </select>
+    <select id="getFastappSource" resultType="com.fish.flowfront.domain.FastAppSource">
+        SELECT `source_bagname` as sourceBagName, `source_page` as sourcePage
+        FROM `fastapp_source`
+        WHERE `source_id` = #{bagid}
+    </select>
+    <select id="sumExpCountsByFlowId" resultType="java.math.BigDecimal">
+        SELECT
+        sum(cast(real_ear AS DECIMAL (11,2))) as realEearSum
+        FROM
+        `stat_zone_day`
+        where
+        flow_id = #{flowId}
         <if test="zoneId != null ">and zone_id = #{zoneId}</if>
         <if test="startDate != null ">and data_stat_time &gt;= #{startDate}</if>
         <if test="endDate != null ">and data_stat_time &lt;= #{endDate}</if>

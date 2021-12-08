@@ -1,11 +1,13 @@
 package com.fish.flowfront.mapper;
 
+import com.fish.flowfront.domain.FastAppSource;
 import com.fish.flowfront.domain.FlowBaseInfo;
 import com.fish.flowfront.domain.StatZoneDayBaseInfo;
 import com.fish.flowfront.domain.ZoneBaseInfo;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -32,6 +34,13 @@ public interface FlowFrontMapper {
      * @return
      */
     List<StatZoneDayBaseInfo> selectStatZoneDay(@Param("flowId") Long flowId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("zoneId") String zoneId);
+
+    /**
+     *  查询流量主合计消费
+     * @param flowId
+     * @return
+     */
+    BigDecimal sumExpCountsByFlowId(@Param("flowId") Long flowId, @Param("startDate") Date startDate, @Param("endDate") Date endDate, @Param("zoneId") String zoneId);
 
     /**
      *  根据流量主id查询流量主基本信息
@@ -74,4 +83,18 @@ public interface FlowFrontMapper {
      * @return
      */
     Integer succeeLogin(@Param("ip") String ip, @Param("nowDate") Long nowDate, @Param("token") String token, @Param("flowId") Long flowId);
+
+    /**
+     *  获取唤醒域名id
+     * @param hxDomainId
+     * @return
+     */
+    String getHxdomain(@Param("hxDomainId") String hxDomainId);
+
+    /**
+     *  获取渠道包名 路径
+     * @param bagid
+     * @return
+     */
+    FastAppSource getFastappSource(@Param("bagid") Long bagid);
 }
